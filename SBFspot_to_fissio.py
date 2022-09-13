@@ -123,9 +123,10 @@ def main():
                 #print("Skipping timestamp until reaching latest written conversion status", previous_ts)
                 continue
             if previous_ts is not None and etotal_row[0] > previous_ts:
-                yield_diff = int((etotal_row[1] - previous_etotal)*1000)
-                timestamp_diff = int(etotal_row[0] - previous_ts)
-                data_str += "{};imp;Solar_PV_Wh;{};{}\n".format(previous_ts, yield_diff, timestamp_diff)
+                yield_diff = (etotal_row[1] - previous_etotal)*1000
+                timestamp_diff = etotal_row[0] - previous_ts
+                avg_yield = yield_diff/timestamp_diff
+                data_str += "{};imp;Solar_PV_Wh;{};{}\n".format(previous_ts, avg_yield, 1)
                 last_printed_ts = previous_ts
                 last_printed_etotal = previous_etotal
                 previous_ts = etotal_row[0]
