@@ -55,25 +55,23 @@ def find_csv_file_format(filename):
     sep = None
     decimal_separator = None
     unit_line_idx = 0
+    units = None
     with open(filename, newline='') as f:
         for i, line in enumerate(f):
             if 'sep=' in line:
                 sep = line.rstrip().split('=')[1]
             if 'Decimalpoint' in line:
                 for kp in line.split('|'):
-                    if kp.split(' ')[0] == 'Decimalpoint':
-                        decimal_separator = kp.split(' ')[1]
+                    kp = kp.split(' ')
+                    if kp[0] == 'Decimalpoint':
+                        decimal_separator = kp[1]
             if sep+'Watt'+sep in line:
                 units = line.split(sep)
                 unit_line_idx = i
             if sep is not None and decimal_separator is not None and unit_line_idx > 0:
                 break
-    return sep, decimal_separator, unit_line_idx
 
-def field_to_float(value):
-    if decimal_separator == 'comma':
-        value = re.sub(r",",'.',value)
-    return float(value)
+    return sep, decimal_separator, unit_line_idx, units
 
 def convert_timestamp_field_to_format(field_name):
     time_format = field_name
@@ -85,13 +83,17 @@ def convert_timestamp_field_to_format(field_name):
     time_format = re.sub(r'ss', '%S', time_format)
     return time_format
 
+def field_to_float(value, decimal_separator):
+    if decimal_separator == 'comma':
+        value = re.sub(r",",'.',value)
+    return float(value)
 
 def main():
     filename = get_last_csv_file_from_dir(sma_log_dir)
     conversion_status = load_conversion_status()
     print("Reading", filename)
-    sep, decimal_separator, unit_line_idx = find_csv_file_format(filename)
-    
+    sep, decimal_separator, unit_line_idx, units = find_csv_file_format(filename)
+
     with open(filename, newline='') as csvfile:
         reader = csv.DictReader(islice(csvfile, unit_line_idx+1, None), delimiter=sep)
         etotal_data = []
@@ -100,7 +102,7 @@ def main():
             timestamp_field_name = list(row)[0]
             time_format = convert_timestamp_field_to_format(timestamp_field_name)
             epoch_timestamp = int(datetime.datetime.strptime(row[timestamp_field_name], time_format).strftime('%s'))
-            etotal_data.append([epoch_timestamp,field_to_float(row['ETotal'])])
+            etotal_data.append([epoch_timestamp,field_to_float(row['ETotal'], decimal_separator)])
 
         previous_ts = None
         previous_etotal = None
